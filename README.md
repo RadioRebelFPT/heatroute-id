@@ -104,7 +104,7 @@ Detail formula HES: lihat [`docs/HES_FORMULA.md`](docs/HES_FORMULA.md).
 
 ## Deploy
 
-**Production:** `https://heatroute-id.vercel.app` *(URL final di-update setelah H4 deploy)*
+**Production:** [heatroute-id.vercel.app](https://heatroute-id.vercel.app/)
 
 ### Deploy fork sendiri
 
