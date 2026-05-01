@@ -1,4 +1,12 @@
-import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from "react-leaflet";
+import { useEffect } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Polyline,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
 import { useAppState } from "../state/AppContext";
 import { ShadeGapLayer } from "./ShadeGapLayer";
@@ -38,6 +46,24 @@ function ClickHandler() {
   return null;
 }
 
+function SelectionBridge() {
+  const map = useMap();
+  const { state } = useAppState();
+  const sel = state.selectedRouteIndex;
+  useEffect(() => {
+    if (sel === null || !state.routes) return;
+    const route = state.routes[sel];
+    if (!route) return;
+    const latlngs = route.geometry.coordinates.map(([lng, lat]) =>
+      L.latLng(lat, lng),
+    );
+    if (latlngs.length === 0) return;
+    const bounds = L.latLngBounds(latlngs);
+    map.flyToBounds(bounds, { padding: [40, 40], duration: 0.5 });
+  }, [sel, state.routes, map]);
+  return null;
+}
+
 export function MapView() {
   const { state } = useAppState();
   return (
@@ -53,21 +79,27 @@ export function MapView() {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ShadeGapLayer visible={state.showShadeGap} />
-      {state.routes?.map((route, i) => (
-        <Polyline
-          key={i}
-          positions={route.geometry.coordinates.map(
-            ([lng, lat]) => [lat, lng] as [number, number],
-          )}
-          pathOptions={{
-            color: primaryColor(route),
-            weight: 5,
-            opacity: 0.85,
-            lineCap: "round",
-          }}
-        />
-      ))}
+      {state.routes?.map((route, i) => {
+        const sel = state.selectedRouteIndex;
+        const isSelected = sel === i;
+        const isDimmed = sel !== null && !isSelected;
+        return (
+          <Polyline
+            key={i}
+            positions={route.geometry.coordinates.map(
+              ([lng, lat]) => [lat, lng] as [number, number],
+            )}
+            pathOptions={{
+              color: primaryColor(route),
+              weight: isSelected ? 7 : isDimmed ? 4 : 5,
+              opacity: isDimmed ? 0.3 : 0.85,
+              lineCap: "round",
+            }}
+          />
+        );
+      })}
       <ClickHandler />
+      <SelectionBridge />
       {state.origin && (
         <Marker
           position={[state.origin.lat, state.origin.lng]}

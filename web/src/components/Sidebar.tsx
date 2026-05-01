@@ -1,7 +1,8 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useAppState } from "../state/AppContext";
-import { SHADE_LEGEND } from "../lib/shade";
+import { SHADE_LEGEND, shadeGapColor } from "../lib/shade";
 import { LABEL_COLORS, LABEL_NAMES, primaryColor } from "../lib/routes";
+import { HES_CATEGORY_COLORS, HES_CATEGORY_NAMES } from "../lib/hes";
 import type { LabeledRoute } from "../state/types";
 
 type SheetState = "closed" | "peek" | "expanded";
@@ -188,7 +189,12 @@ function RouteResults() {
     return (
       <ul className="space-y-2">
         {state.routes.map((r, i) => (
-          <RouteRow key={i} route={r} />
+          <RouteRow
+            key={i}
+            route={r}
+            index={i}
+            isSelected={state.selectedRouteIndex === i}
+          />
         ))}
       </ul>
     );
@@ -208,37 +214,129 @@ function RouteResults() {
   return null;
 }
 
-function RouteRow({ route }: { route: LabeledRoute }) {
+function RouteRow({
+  route,
+  index,
+  isSelected,
+}: {
+  route: LabeledRoute;
+  index: number;
+  isSelected: boolean;
+}) {
+  const { dispatch } = useAppState();
   const color = primaryColor(route);
   const minutes = Math.round(route.duration / 60);
   const km = (route.distance / 1000).toFixed(2);
   const hesPct = Math.round(route.hes * 100);
   return (
-    <li className="rounded-lg border border-slate-200 px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-block h-2 w-6 shrink-0 rounded-sm"
-          style={{ backgroundColor: color }}
-        />
-        <div className="flex flex-wrap gap-1">
-          {route.isFastest && (
-            <Chip color={LABEL_COLORS.fastest} label={LABEL_NAMES.fastest} />
-          )}
-          {route.isCoolest && (
-            <Chip color={LABEL_COLORS.coolest} label={LABEL_NAMES.coolest} />
-          )}
-          {route.isBalanced && (
-            <Chip color={LABEL_COLORS.balanced} label={LABEL_NAMES.balanced} />
-          )}
+    <li>
+      <button
+        type="button"
+        onClick={() =>
+          dispatch({ type: "SELECT_ROUTE", index: isSelected ? null : index })
+        }
+        aria-pressed={isSelected}
+        className={`block w-full rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-slate-50 ${
+          isSelected
+            ? "border-slate-400 bg-slate-50 ring-2 ring-slate-300"
+            : "border-slate-200"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block h-2 w-6 shrink-0 rounded-sm"
+            style={{ backgroundColor: color }}
+          />
+          <div className="flex flex-wrap gap-1">
+            {route.isFastest && (
+              <Chip color={LABEL_COLORS.fastest} label={LABEL_NAMES.fastest} />
+            )}
+            {route.isCoolest && (
+              <Chip color={LABEL_COLORS.coolest} label={LABEL_NAMES.coolest} />
+            )}
+            {route.isBalanced && (
+              <Chip color={LABEL_COLORS.balanced} label={LABEL_NAMES.balanced} />
+            )}
+            <Chip
+              color={HES_CATEGORY_COLORS[route.hesCategory]}
+              label={HES_CATEGORY_NAMES[route.hesCategory]}
+            />
+          </div>
         </div>
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
-        <Metric label="Durasi" value={`${minutes} mnt`} />
-        <Metric label="Jarak" value={`${km} km`} />
-        <Metric label="Panas" value={`${hesPct}%`} />
-      </div>
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+          <Metric label="Durasi" value={`${minutes} mnt`} />
+          <Metric label="Jarak" value={`${km} km`} />
+          <Metric label="Panas" value={`${hesPct}%`} />
+        </div>
+        <RouteBreakdown route={route} />
+      </button>
     </li>
   );
+}
+
+function RouteBreakdown({ route }: { route: LabeledRoute }) {
+  const { state } = useAppState();
+  const w = state.weather;
+  const tempNorm = w ? clamp01((w.temperature - 25) / 15) : null;
+  const humidNorm = w ? clamp01(w.humidity / 100) : null;
+  const uvNorm = w ? clamp01(w.uvIndex / 11) : null;
+  return (
+    <div className="mt-2 space-y-1">
+      <Bar
+        label="Suhu"
+        value={tempNorm}
+        display={w ? `${Math.round(w.temperature)}°` : "—"}
+      />
+      <Bar
+        label="Lembap"
+        value={humidNorm}
+        display={w ? `${Math.round(w.humidity)}%` : "—"}
+      />
+      <Bar
+        label="UV"
+        value={uvNorm}
+        display={w ? w.uvIndex.toFixed(1) : "—"}
+      />
+      <Bar
+        label="Shade"
+        value={route.hes}
+        display={`${Math.round(route.hes * 100)}%`}
+      />
+    </div>
+  );
+}
+
+function Bar({
+  label,
+  value,
+  display,
+}: {
+  label: string;
+  value: number | null;
+  display: string;
+}) {
+  const pct = value === null ? 0 : value * 100;
+  const color = value === null ? "#cbd5e1" : shadeGapColor(value);
+  return (
+    <div className="flex items-center gap-2 text-[10px]">
+      <div className="w-12 shrink-0 font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </div>
+      <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full transition-[width] duration-300"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+      <div className="w-10 shrink-0 text-right font-mono text-slate-600">
+        {display}
+      </div>
+    </div>
+  );
+}
+
+function clamp01(n: number): number {
+  return n < 0 ? 0 : n > 1 ? 1 : n;
 }
 
 function Chip({ color, label }: { color: string; label: string }) {

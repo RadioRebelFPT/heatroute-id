@@ -1,5 +1,6 @@
 import type { LineString } from "geojson";
 import type { Weather } from "../lib/weather";
+import type { HesCategory } from "../lib/hes";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -11,6 +12,7 @@ export type RouteSummary = {
 
 export type LabeledRoute = RouteSummary & {
   hes: number;
+  hesCategory: HesCategory;
   isFastest: boolean;
   isCoolest: boolean;
   isBalanced: boolean;
@@ -26,6 +28,7 @@ export type AppState = {
   routes: LabeledRoute[] | null;
   routesStatus: RoutesStatus;
   routesError: string | null;
+  selectedRouteIndex: number | null;
   weather: Weather | null;
   weatherStatus: WeatherStatus;
   weatherError: string | null;
@@ -39,6 +42,7 @@ export type AppAction =
   | { type: "ROUTES_LOADING" }
   | { type: "ROUTES_SUCCESS"; routes: LabeledRoute[] }
   | { type: "ROUTES_ERROR"; message: string }
+  | { type: "SELECT_ROUTE"; index: number | null }
   | { type: "WEATHER_LOADING" }
   | { type: "WEATHER_SUCCESS"; weather: Weather }
   | { type: "WEATHER_ERROR"; message: string };
@@ -50,6 +54,7 @@ export const initialState: AppState = {
   routes: null,
   routesStatus: "idle",
   routesError: null,
+  selectedRouteIndex: null,
   weather: null,
   weatherStatus: "idle",
   weatherError: null,
@@ -59,6 +64,7 @@ const cleared = {
   routes: null,
   routesStatus: "idle" as const,
   routesError: null,
+  selectedRouteIndex: null,
 };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -79,6 +85,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         routes: action.routes,
         routesStatus: "idle",
         routesError: null,
+        selectedRouteIndex: null,
       };
     case "ROUTES_ERROR":
       return {
@@ -86,7 +93,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         routesStatus: "error",
         routesError: action.message,
         routes: null,
+        selectedRouteIndex: null,
       };
+    case "SELECT_ROUTE":
+      return { ...state, selectedRouteIndex: action.index };
     case "WEATHER_LOADING":
       return { ...state, weatherStatus: "loading", weatherError: null };
     case "WEATHER_SUCCESS":

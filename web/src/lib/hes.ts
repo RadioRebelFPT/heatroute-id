@@ -10,6 +10,29 @@ const SAMPLE_INTERVAL_M = 10;
 const MAX_DIST_TO_SHADE_M = 25;
 const BBOX_PAD_DEG = 30 / 111000;
 
+export type HesCategory = "sejuk" | "cukup-nyaman" | "panas" | "sangat-panas";
+
+export const HES_CATEGORY_NAMES: Record<HesCategory, string> = {
+  sejuk: "Sejuk",
+  "cukup-nyaman": "Cukup nyaman",
+  panas: "Panas",
+  "sangat-panas": "Sangat panas",
+};
+
+export const HES_CATEGORY_COLORS: Record<HesCategory, string> = {
+  sejuk: "#16a34a",
+  "cukup-nyaman": "#84cc16",
+  panas: "#f97316",
+  "sangat-panas": "#dc2626",
+};
+
+export function categorizeHes(hes: number): HesCategory {
+  if (hes < 0.3) return "sejuk";
+  if (hes < 0.5) return "cukup-nyaman";
+  if (hes < 0.7) return "panas";
+  return "sangat-panas";
+}
+
 let indexCache: { data: ShadeCollection; index: Flatbush } | null = null;
 
 function getShadeIndex(shade: ShadeCollection): Flatbush {
@@ -113,6 +136,7 @@ export function computeAndLabel(
 
   return withHes.map((r, i) => ({
     ...r,
+    hesCategory: categorizeHes(r.hes),
     isFastest: r.duration === minDuration,
     isCoolest: r.hes === minHes,
     isBalanced: balancedScores[i] === minBalanced,

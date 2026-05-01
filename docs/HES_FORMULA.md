@@ -91,3 +91,7 @@ Plus breakdown 5 komponen sebagai progress bar mini → user paham *kenapa* HES-
    - Solar geometry per jam keberangkatan (sun position × building height)
    - Crowdsourced reports (warga lapor "panas banget" / "teduh")
    - Time-of-day weighted (pagi vs siang vs sore)
+
+## Stage 2 implementation note (H3, 30 April 2026)
+
+Implementasi Stage 2 menampilkan **empat komponen** pada per-route breakdown bar di sidebar: temperature, humidity, UV index, dan shade gap. Komponen kelima — **vegetation density** — masih bagian dari spesifikasi Stage 1 di atas, tetapi sumber datanya belum terintegrasi (belum ada vegetation polygon layer di GeoJSON yang dipakai `lib/hes.ts`). Komponen ini akan ditambahkan kembali begitu sumber data vegetasi tersedia (post-submission). Untuk Stage 2, perhitungan HES per rute hanya menggunakan `shade_gap` (lihat `computeRouteHes` di `web/src/lib/hes.ts`); cuaca (temp/humid/UV) ditampilkan sebagai konteks global yang sama untuk ketiga rute alternatif.
