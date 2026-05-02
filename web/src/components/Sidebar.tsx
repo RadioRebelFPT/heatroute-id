@@ -3,7 +3,8 @@ import { useAppState } from "../state/AppContext";
 import { SHADE_LEGEND, shadeGapColor } from "../lib/shade";
 import { LABEL_COLORS, LABEL_NAMES, primaryColor } from "../lib/routes";
 import { HES_CATEGORY_COLORS, HES_CATEGORY_NAMES } from "../lib/hes";
-import type { LabeledRoute } from "../state/types";
+import { isInJabodetabek, SCOPE_NAME } from "../lib/scope";
+import type { LabeledRoute, LatLng } from "../state/types";
 
 type SheetState = "closed" | "peek" | "expanded";
 
@@ -104,6 +105,7 @@ export function Sidebar() {
               <PinSlot label="Dari" point={state.origin} placeholder="Tap peta untuk titik awal" />
               <PinSlot label="Ke" point={state.destination} placeholder="Tap peta untuk tujuan" />
             </div>
+            <OutOfCoverageNotice origin={state.origin} destination={state.destination} />
             {state.origin && state.destination && (
               <p className="mt-2 text-[11px] text-slate-400">
                 Tap peta sekali lagi untuk reset.
@@ -370,16 +372,45 @@ function PinSlot({
   point: { lat: number; lng: number } | null;
   placeholder: string;
 }) {
+  const outOfScope = point !== null && !isInJabodetabek(point);
   return (
     <div className="rounded-lg border border-slate-200 px-3 py-2.5">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-        {label}
+      <div className="flex items-center gap-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          {label}
+        </div>
+        {outOfScope && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-800">
+            Luar area data
+          </span>
+        )}
       </div>
       <div className="mt-0.5 font-mono text-xs text-slate-700">
         {point
           ? `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`
           : <span className="text-slate-400">{placeholder}</span>}
       </div>
+    </div>
+  );
+}
+
+function OutOfCoverageNotice({
+  origin,
+  destination,
+}: {
+  origin: LatLng | null;
+  destination: LatLng | null;
+}) {
+  const originOut = origin !== null && !isInJabodetabek(origin);
+  const destOut = destination !== null && !isInJabodetabek(destination);
+  if (!originOut && !destOut) return null;
+  return (
+    <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-snug text-amber-900">
+      <span aria-hidden="true">⚠</span>
+      <span>
+        Data shade hanya tersedia untuk {SCOPE_NAME}. Rute & cuaca tetap akurat,
+        tapi skor panas (HES) dipakai default 50% di luar area.
+      </span>
     </div>
   );
 }
