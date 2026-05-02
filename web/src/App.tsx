@@ -30,7 +30,7 @@ function TopBar() {
   const w = state.weather;
   const subtitle = w
     ? `${Math.round(w.temperature)}°C · ${Math.round(w.humidity)}% · UV ${w.uvIndex.toFixed(1)}`
-    : "Salemba · test bed";
+    : "Jakarta + Depok";
 
   return (
     <header

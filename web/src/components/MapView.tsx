@@ -12,8 +12,9 @@ import { useAppState } from "../state/AppContext";
 import { ShadeGapLayer } from "./ShadeGapLayer";
 import { primaryColor } from "../lib/routes";
 
-const SALEMBA_CENTER: LatLngExpression = [-6.195, 106.845];
-const SALEMBA_ZOOM = 16;
+// Center: midpoint of Jakarta (~-6.18) and Depok (~-6.40); zoom 11 fits both.
+const JABODETABEK_CENTER: LatLngExpression = [-6.295, 106.83];
+const JABODETABEK_ZOOM = 11;
 
 const originIcon = L.divIcon({
   className: "heatroute-pin heatroute-pin-origin",
@@ -68,8 +69,8 @@ export function MapView() {
   const { state } = useAppState();
   return (
     <MapContainer
-      center={SALEMBA_CENTER}
-      zoom={SALEMBA_ZOOM}
+      center={JABODETABEK_CENTER}
+      zoom={JABODETABEK_ZOOM}
       scrollWheelZoom
       zoomControl={false}
       className="h-full w-full"
