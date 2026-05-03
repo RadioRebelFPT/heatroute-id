@@ -40,7 +40,9 @@ const MIN_ZOOM_FOR_CLASS: Record<string, number> = {
 const DEFAULT_MIN_ZOOM = 17;
 
 function visibleAtZoom(highway: string | undefined, zoom: number): boolean {
-  const min = (highway && MIN_ZOOM_FOR_CLASS[highway]) ?? DEFAULT_MIN_ZOOM;
+  const min = highway
+    ? (MIN_ZOOM_FOR_CLASS[highway] ?? DEFAULT_MIN_ZOOM)
+    : DEFAULT_MIN_ZOOM;
   return zoom >= min;
 }
 
