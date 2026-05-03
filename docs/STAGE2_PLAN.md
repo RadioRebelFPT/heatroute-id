@@ -1,8 +1,8 @@
 # Stage 2 Build Plan — HeatRouteID
 
-> **Window:** 28 April – 4 Mei 2026 (7 hari) · Solo builder: Farrel · Pair: PM Aurelia (lihat `AURELIA_ONBOARDING.md`)
+> **Window:** 30 April – 6 Mei 2026 (~7 hari, **deadline 6 Mei** per timeline resmi IYREF 2026-05-03 — sebelumnya 4 Mei, +2 hari runway) · Solo builder: Farrel · Pair: PM Aurelia (lihat `AURELIA_ONBOARDING.md`)
 > **Submission:** Public GitHub repo + install docs (`.md`) + video demo. Bukan mockup — harus jalan beneran.
-> **Driving constraints:** 1 builder, 1 test bed (Salemba), client-side only (tidak ada backend), close gaps dari `../../stage1_review_notes.md`.
+> **Driving constraints:** 1 builder, 1 test bed (Salemba) → di-expand ke Jabodetabek pada H5, client-side only (tidak ada backend), close gaps dari `../../stage1_review_notes.md`.
 
 ---
 
@@ -118,6 +118,28 @@ Tujuan: video production support + bug fix.
 
 ### H6 — 3 Mei (Day 6)
 
+Tujuan: scope expansion verify + extra build day (was code freeze under old 4-Mei deadline; deadline sekarang 6 Mei).
+
+- [x] Bake Jabodetabek shards (70 cells) selesai
+- [x] Visual layer di-upgrade ke per-segment HES (climate + shade + veg)
+- [ ] Browser verify: Jabodetabek-wide rendering, out-of-bbox amber chip, no manifest 404
+- [ ] Demo seed (Halte TJ Salemba → Kampus UI) finalisasi
+- [ ] Decide: tambah sun-aware shade (Option B time-modifier ~1h vs Option C full solar ~6-8h) atau defer ke HackDay
+- [ ] Continue Aurelia video recording support
+
+**EOD:** scope expansion live di prod, decision made on sun-aware shade.
+
+### H7 — 4 Mei (Day 7)
+
+Tujuan: build sun-aware shade kalau Option B/C dipilih, + polish.
+
+- [ ] Implement chosen sun-aware option (kalau ada)
+- [ ] Mobile responsive QA pass kedua (post-Jabodetabek expansion)
+- [ ] Aurelia QA scenarios re-run on production
+- [ ] README update: dokumentasi Jabodetabek scope, per-segment HES visual, optional time-of-day
+
+### H8 — 5 Mei (Day 8)
+
 Tujuan: code freeze + final QA.
 
 - [ ] Code freeze 18:00 WIB. After this: only critical bug fixes.
@@ -128,7 +150,7 @@ Tujuan: code freeze + final QA.
 
 **EOD:** repo & deploy sudah final, video sudah edited.
 
-### H7 — 4 Mei (Day 7, submission)
+### H9 — 6 Mei (Day 9, submission)
 
 Tujuan: submit & buffer.
 
