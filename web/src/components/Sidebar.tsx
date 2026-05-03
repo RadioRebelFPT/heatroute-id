@@ -1,8 +1,8 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useAppState } from "../state/AppContext";
-import { SHADE_LEGEND, shadeGapColor } from "../lib/shade";
+import { shadeGapColor } from "../lib/shade";
 import { LABEL_COLORS, LABEL_NAMES, primaryColor } from "../lib/routes";
-import { HES_CATEGORY_COLORS, HES_CATEGORY_NAMES } from "../lib/hes";
+import { HES_CATEGORY_COLORS, HES_CATEGORY_NAMES, HES_LEGEND } from "../lib/hes";
 import { isInJabodetabek, SCOPE_NAME } from "../lib/scope";
 import type { LabeledRoute, LatLng } from "../state/types";
 
@@ -116,7 +116,7 @@ export function Sidebar() {
           <section className="mb-5">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                Shade Gap Map
+                Peta Paparan Panas
               </h2>
               <button
                 type="button"
@@ -126,8 +126,11 @@ export function Sidebar() {
                 {state.showShadeGap ? "Sembunyikan" : "Tampilkan"}
               </button>
             </div>
+            <p className="mb-2 text-[11px] leading-snug text-slate-500">
+              HES per ruas: cuaca + shade gap + vegetasi.
+            </p>
             <ul className="space-y-1.5">
-              {SHADE_LEGEND.map((item) => (
+              {HES_LEGEND.map((item) => (
                 <li key={item.label} className="flex items-center gap-2 text-xs text-slate-700">
                   <span
                     className="inline-block h-3 w-6 rounded-sm"
