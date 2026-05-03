@@ -1,6 +1,7 @@
 import { AppProvider, useAppState } from "./state/AppContext";
 import { useRoutesEffect } from "./state/useRoutesEffect";
 import { useWeatherEffect } from "./state/useWeatherEffect";
+import { weatherAt } from "./lib/weather";
 import { MapView } from "./components/MapView";
 import { Sidebar } from "./components/Sidebar";
 
@@ -27,7 +28,7 @@ function Effects() {
 
 function TopBar() {
   const { state } = useAppState();
-  const w = state.weather;
+  const w = weatherAt(state.weather, state.departureTime);
   const subtitle = w
     ? `${Math.round(w.temperature)}°C · ${Math.round(w.humidity)}% · UV ${w.uvIndex.toFixed(1)}`
     : "Jakarta + Depok";

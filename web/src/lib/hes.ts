@@ -11,26 +11,34 @@ const SAMPLE_INTERVAL_M = 10;
 const MAX_DIST_TO_SHADE_M = 25;
 const BBOX_PAD_DEG = 30 / 111000;
 
-export type HesCategory = "sejuk" | "cukup-nyaman" | "panas" | "sangat-panas";
+export type HesCategory =
+  | "sejuk"
+  | "cukup-nyaman"
+  | "sedang"
+  | "panas"
+  | "sangat-panas";
 
 export const HES_CATEGORY_NAMES: Record<HesCategory, string> = {
   sejuk: "Sejuk",
   "cukup-nyaman": "Cukup nyaman",
+  sedang: "Sedang",
   panas: "Panas",
   "sangat-panas": "Sangat panas",
 };
 
 export const HES_CATEGORY_COLORS: Record<HesCategory, string> = {
-  sejuk: "#16a34a",
-  "cukup-nyaman": "#84cc16",
-  panas: "#f97316",
-  "sangat-panas": "#dc2626",
+  sejuk: "#16a34a",       // green-600
+  "cukup-nyaman": "#84cc16", // lime-500
+  sedang: "#facc15",      // yellow-400
+  panas: "#f97316",       // orange-500
+  "sangat-panas": "#dc2626", // red-600
 };
 
 export function categorizeHes(hes: number): HesCategory {
-  if (hes < 0.3) return "sejuk";
-  if (hes < 0.5) return "cukup-nyaman";
-  if (hes < 0.7) return "panas";
+  if (hes < 0.2) return "sejuk";
+  if (hes < 0.4) return "cukup-nyaman";
+  if (hes < 0.6) return "sedang";
+  if (hes < 0.8) return "panas";
   return "sangat-panas";
 }
 
@@ -59,19 +67,37 @@ export function climateContribution(w: Weather): number {
 }
 
 /** Full HES per pre-baked shade segment: climate + shade gap + vegetation gap.
- * Returns [0, 1]. Used to color the city heat-exposure map layer. */
-export function segmentHes(props: ShadeProps, w: Weather): number {
+ * Returns [0, 1]. Used to color the city heat-exposure map layer.
+ *
+ * `bldgTimeFactor` ∈ [0, 1] modulates the building-proximity contribution to
+ * shade by sun altitude (see lib/sun.ts). Default 1 keeps the bake-static
+ * behavior. When the sun is overhead (factor → 0), buildings stop shading the
+ * road, so the effective shade gap rises by the building share of static
+ * shade coverage (0.30 per HES_FORMULA.md).
+ *
+ * `shadeSensitivity` ∈ [0, 1] gates the entire shade+veg contribution by sun
+ * altitude — at night there's no direct sun to be exposed from, so HES
+ * collapses to pure climate. Default 1 preserves daytime behavior. */
+export function segmentHes(
+  props: ShadeProps,
+  w: Weather,
+  bldgTimeFactor = 1,
+  shadeSensitivity = 1,
+): number {
   const climate = climateContribution(w);
-  const shadeGap = clamp01(props.shade_gap);
+  const baseShadeGap = clamp01(props.shade_gap);
+  const bldgReduction = 0.3 * clamp01(props.building_proximity) * (1 - bldgTimeFactor);
+  const shadeGap = clamp01(baseShadeGap + bldgReduction);
   const vegGap = clamp01(1 - props.veg_density_norm);
-  return clamp01(climate + W_SHADE * shadeGap + W_VEG * vegGap);
+  return clamp01(climate + shadeSensitivity * (W_SHADE * shadeGap + W_VEG * vegGap));
 }
 
 export const HES_LEGEND: Array<{ label: string; range: string; color: string }> = [
-  { label: HES_CATEGORY_NAMES.sejuk, range: "0–30", color: HES_CATEGORY_COLORS.sejuk },
-  { label: HES_CATEGORY_NAMES["cukup-nyaman"], range: "30–50", color: HES_CATEGORY_COLORS["cukup-nyaman"] },
-  { label: HES_CATEGORY_NAMES.panas, range: "50–70", color: HES_CATEGORY_COLORS.panas },
-  { label: HES_CATEGORY_NAMES["sangat-panas"], range: "70–100", color: HES_CATEGORY_COLORS["sangat-panas"] },
+  { label: HES_CATEGORY_NAMES.sejuk, range: "0–20", color: HES_CATEGORY_COLORS.sejuk },
+  { label: HES_CATEGORY_NAMES["cukup-nyaman"], range: "20–40", color: HES_CATEGORY_COLORS["cukup-nyaman"] },
+  { label: HES_CATEGORY_NAMES.sedang, range: "40–60", color: HES_CATEGORY_COLORS.sedang },
+  { label: HES_CATEGORY_NAMES.panas, range: "60–80", color: HES_CATEGORY_COLORS.panas },
+  { label: HES_CATEGORY_NAMES["sangat-panas"], range: "80–100", color: HES_CATEGORY_COLORS["sangat-panas"] },
 ];
 
 let indexCache: { data: ShadeCollection; index: Flatbush } | null = null;

@@ -76,10 +76,11 @@ Skor disajikan dengan kategori warna untuk readability:
 
 | Range HES | Label | Warna |
 |---|---|---|
-| 0–30 | Sejuk | 🟢 hijau |
-| 31–55 | Cukup nyaman | 🟡 kuning |
-| 56–75 | Panas | 🟠 oranye |
-| 76–100 | Sangat panas | 🔴 merah |
+| 0–20 | Sejuk | 🟢 hijau |
+| 20–40 | Cukup nyaman | 🟢 lime |
+| 40–60 | Sedang | 🟡 kuning |
+| 60–80 | Panas | 🟠 oranye |
+| 80–100 | Sangat panas | 🔴 merah |
 
 Plus breakdown 5 komponen sebagai progress bar mini → user paham *kenapa* HES-nya tinggi (mis. "UV tinggi + pohon minim").
 

@@ -5,23 +5,34 @@ export type Weather = {
   uvIndex: number;
 };
 
+/** 24-entry hourly snapshot for today (local time), indexed by hour-of-day
+ * (0..23). For past hours of today, Open-Meteo backfills with observed values;
+ * for future hours, it returns forecast. So `weatherAt(hourly, time)` is
+ * "what the climate is at that hour today" without distinguishing observed vs.
+ * forecast in the UI. */
+export type WeatherHourly = {
+  hours: Weather[];
+  fetchedAt: number;
+};
+
 const URL = "https://api.open-meteo.com/v1/forecast";
-const cache = new Map<string, Weather>();
+const cache = new Map<string, WeatherHourly>();
 
 function cacheKey(lat: number, lng: number): string {
   return `${lat.toFixed(3)}|${lng.toFixed(3)}`;
 }
 
-type OpenMeteoResponse = {
-  current: {
-    temperature_2m: number;
-    apparent_temperature: number;
-    relative_humidity_2m: number;
-    uv_index: number;
+type OpenMeteoHourlyResponse = {
+  hourly: {
+    time: string[];
+    temperature_2m: number[];
+    apparent_temperature: number[];
+    relative_humidity_2m: number[];
+    uv_index: number[];
   };
 };
 
-export async function fetchWeather(lat: number, lng: number): Promise<Weather> {
+export async function fetchWeatherHourly(lat: number, lng: number): Promise<WeatherHourly> {
   const key = cacheKey(lat, lng);
   const cached = cache.get(key);
   if (cached) return cached;
@@ -29,8 +40,9 @@ export async function fetchWeather(lat: number, lng: number): Promise<Weather> {
   const params = new URLSearchParams({
     latitude: lat.toString(),
     longitude: lng.toString(),
-    current:
+    hourly:
       "temperature_2m,apparent_temperature,relative_humidity_2m,uv_index",
+    forecast_days: "1",
     timezone: "auto",
   });
 
@@ -38,13 +50,22 @@ export async function fetchWeather(lat: number, lng: number): Promise<Weather> {
   if (!response.ok) {
     throw new Error(`Open-Meteo error ${response.status}`);
   }
-  const data = (await response.json()) as OpenMeteoResponse;
-  const weather: Weather = {
-    temperature: data.current.temperature_2m,
-    apparentTemp: data.current.apparent_temperature,
-    humidity: data.current.relative_humidity_2m,
-    uvIndex: data.current.uv_index,
-  };
-  cache.set(key, weather);
-  return weather;
+  const data = (await response.json()) as OpenMeteoHourlyResponse;
+  const h = data.hourly;
+  const hours: Weather[] = h.time.map((_, i) => ({
+    temperature: h.temperature_2m[i],
+    apparentTemp: h.apparent_temperature[i],
+    humidity: h.relative_humidity_2m[i],
+    uvIndex: h.uv_index[i],
+  }));
+  const out: WeatherHourly = { hours, fetchedAt: Date.now() };
+  cache.set(key, out);
+  return out;
+}
+
+/** Pick the hour-of-day matching `time`. Returns null if hourly data missing. */
+export function weatherAt(hourly: WeatherHourly | null, time: Date): Weather | null {
+  if (!hourly) return null;
+  const h = time.getHours();
+  return hourly.hours[h] ?? null;
 }

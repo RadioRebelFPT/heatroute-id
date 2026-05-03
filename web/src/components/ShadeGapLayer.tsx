@@ -13,6 +13,8 @@ import {
   type Bbox,
   type ShadeFeature,
 } from "../lib/shadeData";
+import { buildingShadeTimeFactor, shadeSensitivityFactor, sunAltitudeRad } from "../lib/sun";
+import { weatherAt } from "../lib/weather";
 import { useAppState } from "../state/AppContext";
 
 // Below this zoom, shade-gap segments are too dense to render usefully
@@ -57,7 +59,10 @@ function featureIntersectsBbox(f: ShadeFeature, bbox: Bbox): boolean {
 export function ShadeGapLayer({ visible }: { visible: boolean }) {
   const map = useMap();
   const { state } = useAppState();
-  const weather = state.weather;
+  const weather = weatherAt(state.weather, state.departureTime);
+  const altitude = sunAltitudeRad(state.departureTime);
+  const bldgTimeFactor = buildingShadeTimeFactor(altitude);
+  const shadeSensitivity = shadeSensitivityFactor(altitude);
   const [zoom, setZoom] = useState<number>(map.getZoom());
   const [features, setFeatures] = useState<ShadeFeature[]>([]);
 
@@ -137,7 +142,7 @@ export function ShadeGapLayer({ visible }: { visible: boolean }) {
         // to shade-only color in the brief window before the first weather
         // fetch resolves so the map is never blank.
         const color = weather
-          ? HES_CATEGORY_COLORS[categorizeHes(segmentHes(f.properties, weather))]
+          ? HES_CATEGORY_COLORS[categorizeHes(segmentHes(f.properties, weather, bldgTimeFactor, shadeSensitivity))]
           : shadeGapColor(f.properties.shade_gap);
         return (
           <Polyline

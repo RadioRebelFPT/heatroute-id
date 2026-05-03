@@ -3,6 +3,8 @@ import { useAppState } from "../state/AppContext";
 import { shadeGapColor } from "../lib/shade";
 import { LABEL_COLORS, LABEL_NAMES, primaryColor } from "../lib/routes";
 import { HES_CATEGORY_COLORS, HES_CATEGORY_NAMES, HES_LEGEND } from "../lib/hes";
+import { weatherAt } from "../lib/weather";
+import { TimeSlider } from "./TimeSlider";
 import { isInJabodetabek, SCOPE_NAME } from "../lib/scope";
 import type { LabeledRoute, LatLng } from "../state/types";
 
@@ -113,6 +115,8 @@ export function Sidebar() {
             )}
           </section>
 
+          <TimeSlider />
+
           <section className="mb-5">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -164,13 +168,13 @@ export function Sidebar() {
 
 function WeatherDisplay() {
   const { state } = useAppState();
-  if (!state.weather) {
+  const w = weatherAt(state.weather, state.departureTime);
+  if (!w) {
     if (state.weatherStatus === "error") {
       return <p className="text-xs text-rose-600">{state.weatherError}</p>;
     }
     return <p className="text-xs text-slate-400">Memuat cuaca...</p>;
   }
-  const w = state.weather;
   return (
     <div className="grid grid-cols-4 gap-2 text-[11px]">
       <Metric label="Suhu" value={`${Math.round(w.temperature)}°`} />
@@ -281,7 +285,7 @@ function RouteRow({
 
 function RouteBreakdown({ route }: { route: LabeledRoute }) {
   const { state } = useAppState();
-  const w = state.weather;
+  const w = weatherAt(state.weather, state.departureTime);
   const tempNorm = w ? clamp01((w.temperature - 25) / 15) : null;
   const humidNorm = w ? clamp01(w.humidity / 100) : null;
   const uvNorm = w ? clamp01(w.uvIndex / 11) : null;

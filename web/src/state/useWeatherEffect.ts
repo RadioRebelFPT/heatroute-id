@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppState } from "./AppContext";
-import { fetchWeather } from "../lib/weather";
+import { fetchWeatherHourly } from "../lib/weather";
 
 const SALEMBA_LAT = -6.195;
 const SALEMBA_LNG = 106.845;
@@ -13,7 +13,7 @@ export function useWeatherEffect() {
   useEffect(() => {
     let cancelled = false;
     dispatch({ type: "WEATHER_LOADING" });
-    fetchWeather(lat, lng)
+    fetchWeatherHourly(lat, lng)
       .then((w) => {
         if (cancelled) return;
         dispatch({ type: "WEATHER_SUCCESS", weather: w });

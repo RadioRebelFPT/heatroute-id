@@ -1,5 +1,5 @@
 import type { LineString } from "geojson";
-import type { Weather } from "../lib/weather";
+import type { WeatherHourly } from "../lib/weather";
 import type { HesCategory } from "../lib/hes";
 
 export type LatLng = { lat: number; lng: number };
@@ -29,9 +29,10 @@ export type AppState = {
   routesStatus: RoutesStatus;
   routesError: string | null;
   selectedRouteIndex: number | null;
-  weather: Weather | null;
+  weather: WeatherHourly | null;
   weatherStatus: WeatherStatus;
   weatherError: string | null;
+  departureTime: Date;
 };
 
 export type AppAction =
@@ -44,8 +45,9 @@ export type AppAction =
   | { type: "ROUTES_ERROR"; message: string }
   | { type: "SELECT_ROUTE"; index: number | null }
   | { type: "WEATHER_LOADING" }
-  | { type: "WEATHER_SUCCESS"; weather: Weather }
-  | { type: "WEATHER_ERROR"; message: string };
+  | { type: "WEATHER_SUCCESS"; weather: WeatherHourly }
+  | { type: "WEATHER_ERROR"; message: string }
+  | { type: "SET_DEPARTURE_TIME"; time: Date };
 
 export const initialState: AppState = {
   origin: null,
@@ -58,6 +60,7 @@ export const initialState: AppState = {
   weather: null,
   weatherStatus: "idle",
   weatherError: null,
+  departureTime: new Date(),
 };
 
 const cleared = {
@@ -112,5 +115,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         weatherStatus: "error",
         weatherError: action.message,
       };
+    case "SET_DEPARTURE_TIME":
+      return { ...state, departureTime: action.time };
   }
 }
