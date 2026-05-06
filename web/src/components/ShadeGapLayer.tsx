@@ -15,7 +15,7 @@ import {
 } from "../lib/shadeData";
 import { buildingShadeTimeFactor, shadeSensitivityFactor, sunAltitudeRad } from "../lib/sun";
 import { weatherAt } from "../lib/weather";
-import { useAppState } from "../state/AppContext";
+import { useAppState } from "../state/useAppState";
 
 // Below this zoom, shade-gap segments are too dense to render usefully
 // (and would spawn thousands of SVG polylines). Hidden but still loadable
@@ -96,9 +96,6 @@ export function ShadeGapLayer({ visible }: { visible: boolean }) {
     return () => {
       cancelled = true;
     };
-    // We refresh imperatively from useMapEvents below; keep this effect
-    // for the initial mount + visibility toggle only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, map]);
 
   useMapEvents({

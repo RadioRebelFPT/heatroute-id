@@ -1,14 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
+  Circle,
   MapContainer,
-  TileLayer,
   Marker,
   Polyline,
+  TileLayer,
   useMap,
   useMapEvents,
 } from "react-leaflet";
 import L, { type LatLngExpression } from "leaflet";
-import { useAppState } from "../state/AppContext";
+import { useAppState } from "../state/useAppState";
 import { ShadeGapLayer } from "./ShadeGapLayer";
 import { primaryColor } from "../lib/routes";
 
@@ -28,6 +29,13 @@ const destinationIcon = L.divIcon({
   html: "<span>B</span>",
   iconSize: [32, 32],
   iconAnchor: [16, 16],
+});
+
+const gpsIcon = L.divIcon({
+  className: "heatroute-gps-marker",
+  html: "<span></span>",
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 function ClickHandler() {
@@ -65,6 +73,34 @@ function SelectionBridge() {
   return null;
 }
 
+function GpsRecenter() {
+  const { state } = useAppState();
+  const map = useMap();
+  const didCenter = useRef(false);
+
+  useEffect(() => {
+    if (state.gpsStatus === "requesting") {
+      didCenter.current = false;
+    }
+    if (
+      !state.gpsPosition ||
+      state.gpsStatus !== "tracking" ||
+      didCenter.current
+    ) {
+      return;
+    }
+
+    didCenter.current = true;
+    map.flyTo(
+      [state.gpsPosition.lat, state.gpsPosition.lng],
+      Math.max(map.getZoom(), 17),
+      { duration: 0.8 },
+    );
+  }, [map, state.gpsPosition, state.gpsStatus]);
+
+  return null;
+}
+
 export function MapView() {
   const { state } = useAppState();
   return (
@@ -80,6 +116,7 @@ export function MapView() {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ShadeGapLayer visible={state.showShadeGap} />
+      <GpsRecenter />
       {state.routes?.map((route, i) => {
         const sel = state.selectedRouteIndex;
         const isSelected = sel === i;
@@ -114,6 +151,29 @@ export function MapView() {
           icon={destinationIcon}
           interactive={false}
         />
+      )}
+      {state.gpsPosition && (
+        <>
+          {state.gpsAccuracy !== null && state.gpsAccuracy <= 1000 && (
+            <Circle
+              center={[state.gpsPosition.lat, state.gpsPosition.lng]}
+              radius={state.gpsAccuracy}
+              pathOptions={{
+                color: "#0284c7",
+                fillColor: "#38bdf8",
+                fillOpacity: 0.12,
+                opacity: 0.3,
+                weight: 1,
+              }}
+              interactive={false}
+            />
+          )}
+          <Marker
+            position={[state.gpsPosition.lat, state.gpsPosition.lng]}
+            icon={gpsIcon}
+            interactive={false}
+          />
+        </>
       )}
     </MapContainer>
   );

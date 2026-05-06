@@ -1,7 +1,11 @@
-import { AppProvider, useAppState } from "./state/AppContext";
+import { AppProvider } from "./state/AppContext";
+import { useAppState } from "./state/useAppState";
+import { useDepartureNowEffect } from "./state/useDepartureNowEffect";
+import { useGeolocationEffect } from "./state/useGeolocationEffect";
 import { useRoutesEffect } from "./state/useRoutesEffect";
 import { useWeatherEffect } from "./state/useWeatherEffect";
 import { weatherAt } from "./lib/weather";
+import { GpsControl } from "./components/GpsControl";
 import { MapView } from "./components/MapView";
 import { Sidebar } from "./components/Sidebar";
 
@@ -14,6 +18,7 @@ export default function App() {
           <MapView />
         </div>
         <TopBar />
+        <GpsControl />
         <Sidebar />
       </div>
     </AppProvider>
@@ -21,6 +26,8 @@ export default function App() {
 }
 
 function Effects() {
+  useDepartureNowEffect();
+  useGeolocationEffect();
   useRoutesEffect();
   useWeatherEffect();
   return null;

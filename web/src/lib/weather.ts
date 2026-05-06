@@ -42,7 +42,7 @@ export async function fetchWeatherHourly(lat: number, lng: number): Promise<Weat
     longitude: lng.toString(),
     hourly:
       "temperature_2m,apparent_temperature,relative_humidity_2m,uv_index",
-    forecast_days: "1",
+    forecast_days: "2",
     timezone: "auto",
   });
 
@@ -63,9 +63,18 @@ export async function fetchWeatherHourly(lat: number, lng: number): Promise<Weat
   return out;
 }
 
-/** Pick the hour-of-day matching `time`. Returns null if hourly data missing. */
+function localDayStart(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+/** Pick the forecast hour matching `time` across the 2-day window. Returns
+ * null if `time` is outside the fetched window. */
 export function weatherAt(hourly: WeatherHourly | null, time: Date): Weather | null {
   if (!hourly) return null;
-  const h = time.getHours();
-  return hourly.hours[h] ?? null;
+  const dayOffset = Math.round(
+    (localDayStart(time) - localDayStart(new Date(hourly.fetchedAt))) / 86_400_000,
+  );
+  if (dayOffset < 0) return null;
+  const idx = dayOffset * 24 + time.getHours();
+  return hourly.hours[idx] ?? null;
 }

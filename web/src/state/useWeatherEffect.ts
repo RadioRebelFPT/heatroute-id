@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useAppState } from "./AppContext";
+import { useAppState } from "./useAppState";
 import { fetchWeatherHourly } from "../lib/weather";
 
 const SALEMBA_LAT = -6.195;

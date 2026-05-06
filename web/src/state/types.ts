@@ -3,6 +3,13 @@ import type { WeatherHourly } from "../lib/weather";
 import type { HesCategory } from "../lib/hes";
 
 export type LatLng = { lat: number; lng: number };
+export type GpsStatus =
+  | "idle"
+  | "requesting"
+  | "tracking"
+  | "denied"
+  | "unavailable"
+  | "error";
 
 export type RouteSummary = {
   geometry: LineString;
@@ -25,6 +32,10 @@ export type AppState = {
   origin: LatLng | null;
   destination: LatLng | null;
   showShadeGap: boolean;
+  gpsPosition: LatLng | null;
+  gpsAccuracy: number | null;
+  gpsStatus: GpsStatus;
+  gpsError: string | null;
   routes: LabeledRoute[] | null;
   routesStatus: RoutesStatus;
   routesError: string | null;
@@ -33,6 +44,7 @@ export type AppState = {
   weatherStatus: WeatherStatus;
   weatherError: string | null;
   departureTime: Date;
+  departureMode: "now" | "today" | "tomorrow";
 };
 
 export type AppAction =
@@ -40,6 +52,17 @@ export type AppAction =
   | { type: "SET_DESTINATION"; point: LatLng | null }
   | { type: "RESET_PINS" }
   | { type: "TOGGLE_SHADE_GAP" }
+  | { type: "GPS_START" }
+  | { type: "GPS_STOP" }
+  | { type: "GPS_POSITION"; point: LatLng; accuracy: number | null }
+  | {
+      type: "GPS_ERROR";
+      status: Exclude<
+        GpsStatus,
+        "idle" | "requesting" | "tracking"
+      >;
+      message: string;
+    }
   | { type: "ROUTES_LOADING" }
   | { type: "ROUTES_SUCCESS"; routes: LabeledRoute[] }
   | { type: "ROUTES_ERROR"; message: string }
@@ -47,12 +70,17 @@ export type AppAction =
   | { type: "WEATHER_LOADING" }
   | { type: "WEATHER_SUCCESS"; weather: WeatherHourly }
   | { type: "WEATHER_ERROR"; message: string }
-  | { type: "SET_DEPARTURE_TIME"; time: Date };
+  | { type: "SET_DEPARTURE_TIME"; time: Date }
+  | { type: "SET_DEPARTURE_MODE"; mode: "now" | "today" | "tomorrow" };
 
 export const initialState: AppState = {
   origin: null,
   destination: null,
   showShadeGap: true,
+  gpsPosition: null,
+  gpsAccuracy: null,
+  gpsStatus: "idle",
+  gpsError: null,
   routes: null,
   routesStatus: "idle",
   routesError: null,
@@ -61,6 +89,7 @@ export const initialState: AppState = {
   weatherStatus: "idle",
   weatherError: null,
   departureTime: new Date(),
+  departureMode: "now",
 };
 
 const cleared = {
@@ -80,6 +109,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, origin: null, destination: null, ...cleared };
     case "TOGGLE_SHADE_GAP":
       return { ...state, showShadeGap: !state.showShadeGap };
+    case "GPS_START":
+      return { ...state, gpsStatus: "requesting", gpsError: null };
+    case "GPS_STOP":
+      return {
+        ...state,
+        gpsPosition: null,
+        gpsAccuracy: null,
+        gpsStatus: "idle",
+        gpsError: null,
+      };
+    case "GPS_POSITION":
+      return {
+        ...state,
+        gpsPosition: action.point,
+        gpsAccuracy: action.accuracy,
+        gpsStatus: "tracking",
+        gpsError: null,
+      };
+    case "GPS_ERROR":
+      return {
+        ...state,
+        gpsPosition: null,
+        gpsAccuracy: null,
+        gpsStatus: action.status,
+        gpsError: action.message,
+      };
     case "ROUTES_LOADING":
       return { ...state, routesStatus: "loading", routesError: null };
     case "ROUTES_SUCCESS":
@@ -117,5 +172,23 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     case "SET_DEPARTURE_TIME":
       return { ...state, departureTime: action.time };
+    case "SET_DEPARTURE_MODE": {
+      if (action.mode === "now") {
+        return {
+          ...state,
+          departureMode: "now",
+          departureTime: new Date(),
+        };
+      }
+      const base = new Date();
+      if (action.mode === "tomorrow") base.setDate(base.getDate() + 1);
+      base.setHours(
+        state.departureTime.getHours(),
+        state.departureTime.getMinutes(),
+        0,
+        0,
+      );
+      return { ...state, departureMode: action.mode, departureTime: base };
+    }
   }
 }

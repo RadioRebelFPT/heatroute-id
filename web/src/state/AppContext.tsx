@@ -1,17 +1,12 @@
-import { createContext, useContext, useReducer, type ReactNode, type Dispatch } from "react";
-import { appReducer, initialState, type AppAction, type AppState } from "./types";
-
-type Ctx = { state: AppState; dispatch: Dispatch<AppAction> };
-
-const AppContext = createContext<Ctx | null>(null);
+import { useReducer, type ReactNode } from "react";
+import { AppStateContext } from "./AppStateContext";
+import { appReducer, initialState } from "./types";
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
-}
-
-export function useAppState() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useAppState must be used inside AppProvider");
-  return ctx;
+  return (
+    <AppStateContext.Provider value={{ state, dispatch }}>
+      {children}
+    </AppStateContext.Provider>
+  );
 }

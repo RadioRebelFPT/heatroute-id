@@ -201,11 +201,13 @@ export function computeAndLabel(
   });
   const minBalanced = Math.min(...balancedScores);
 
-  return withHes.map((r, i) => ({
-    ...r,
-    hesCategory: categorizeHes(r.hes),
-    isFastest: r.duration === minDuration,
-    isCoolest: r.hes === minHes,
-    isBalanced: balancedScores[i] === minBalanced,
-  }));
+  return withHes
+    .map((r, i) => ({
+      ...r,
+      hesCategory: categorizeHes(r.hes),
+      isFastest: r.duration === minDuration,
+      isCoolest: r.hes === minHes,
+      isBalanced: balancedScores[i] === minBalanced,
+    }))
+    .filter((r) => r.isFastest || r.isCoolest || r.isBalanced);
 }

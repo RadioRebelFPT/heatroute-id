@@ -1,9 +1,10 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { useAppState } from "../state/AppContext";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useAppState } from "../state/useAppState";
 import { shadeGapColor } from "../lib/shade";
 import { LABEL_COLORS, LABEL_NAMES, primaryColor } from "../lib/routes";
 import { HES_CATEGORY_COLORS, HES_CATEGORY_NAMES, HES_LEGEND } from "../lib/hes";
 import { weatherAt } from "../lib/weather";
+import { reverseGeocode } from "../lib/geocode";
 import { TimeSlider } from "./TimeSlider";
 import { isInJabodetabek, SCOPE_NAME } from "../lib/scope";
 import type { LabeledRoute, LatLng } from "../state/types";
@@ -380,6 +381,45 @@ function PinSlot({
   placeholder: string;
 }) {
   const outOfScope = point !== null && !isInJabodetabek(point);
+  const [name, setName] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!point) {
+      setName(null);
+      setResolving(false);
+      return;
+    }
+    let cancelled = false;
+    setName(null);
+    setResolving(true);
+    reverseGeocode(point.lat, point.lng).then((resolved) => {
+      if (cancelled) return;
+      setName(resolved);
+      setResolving(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [point?.lat, point?.lng]);
+
+  let body: React.ReactNode;
+  if (!point) {
+    body = (
+      <span className="text-slate-400">{placeholder}</span>
+    );
+  } else if (name) {
+    body = <span className="text-slate-700">{name}</span>;
+  } else if (resolving) {
+    body = <span className="text-slate-400">Mencari nama tempat…</span>;
+  } else {
+    body = (
+      <span className="font-mono text-slate-700">
+        {point.lat.toFixed(5)}, {point.lng.toFixed(5)}
+      </span>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-slate-200 px-3 py-2.5">
       <div className="flex items-center gap-2">
@@ -392,11 +432,7 @@ function PinSlot({
           </span>
         )}
       </div>
-      <div className="mt-0.5 font-mono text-xs text-slate-700">
-        {point
-          ? `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}`
-          : <span className="text-slate-400">{placeholder}</span>}
-      </div>
+      <div className="mt-0.5 text-xs">{body}</div>
     </div>
   );
 }

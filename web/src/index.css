@@ -39,3 +39,49 @@ body {
 .heatroute-pin-destination {
   background: #dc2626;
 }
+
+.heatroute-gps-marker {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.heatroute-gps-marker::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.28);
+  animation: heatroute-gps-pulse 1.8s ease-out infinite;
+}
+
+.heatroute-gps-marker span {
+  position: absolute;
+  inset: 6px;
+  display: block;
+  border: 3px solid white;
+  border-radius: 999px;
+  background: #0284c7;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.45);
+}
+
+.heatroute-time-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.heatroute-time-input::-webkit-inner-spin-button,
+.heatroute-time-input::-webkit-clear-button {
+  display: none;
+}
+
+@keyframes heatroute-gps-pulse {
+  0% {
+    transform: scale(0.75);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
