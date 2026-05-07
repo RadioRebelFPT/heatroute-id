@@ -1,5 +1,7 @@
 # Heat Exposure Score (HES) — Specification
 
+> **Status:** Draft v0.1 (28 April 2026 plan). Final value akan di-tune di H2 (29 April) berdasarkan distribusi data di test bed Salemba.
+
 ## Tujuan
 
 HES adalah skor 0–100 yang merepresentasikan tingkat paparan panas yang akan dialami pejalan kaki saat menempuh sebuah rute. **Lower HES = lebih nyaman & lebih teduh.**
@@ -42,7 +44,7 @@ Hitungan pohon (OSM `natural=tree`) per 100 m segment, dinormalisasi:
 ```
 vegetation_density_norm = clamp(tree_count_per_100m / 8, 0, 1)
 ```
-Threshold 8 pohon per 100m diasumsikan sebagai "padat" untuk konteks trotoar Jakarta — di-tune setelah melihat distribusi aktual.
+Threshold 8 pohon per 100m diasumsikan sebagai "padat" untuk konteks trotoar Jakarta — di-tune saat melihat distribusi aktual H1.
 
 ### Agregasi rute
 Untuk satu rute (hasil ORS) yang terdiri dari N segments:
@@ -84,11 +86,13 @@ Plus breakdown 5 komponen sebagai progress bar mini → user paham *kenapa* HES-
 
 ## Catatan implementasi
 
-1. **Bobot bersifat hipotesis awal** dan dapat di-tune setelah memvalidasi distribusi shade/veg pada coverage area aktual.
-2. **Cuaca diambil hourly** (Open-Meteo `forecast`), bukan single snapshot. Saat user menggeser slider waktu keberangkatan, HES re-rank pakai temp/humid/UV pada jam tersebut — bukan satu nilai untuk seluruh sesi.
-3. **Sun-altitude modulation** (sudah live): bobot shade dan vegetation di-skala oleh ketinggian matahari per timestamp keberangkatan via [SunCalc](https://github.com/mourner/suncalc). Saat malam (matahari di bawah horizon), kontribusi shade/veg kolaps — HES jatuh ke pure-climate. Saat matahari overhead, building-derived shade berkurang karena bayangan jatuh tegak lurus.
-4. **Vegetation density** dibawa dari pre-baked GeoJSON yang sama (`veg_density_norm` per segment) dan masuk ke per-rute HES via `computeRouteMetrics` di `web/src/lib/hes.ts`.
-5. **Future work**:
+1. **Bobot di-tune di H2** setelah lihat distribusi shade/veg di Salemba. Default di atas adalah hipotesis awal.
+2. **Suhu, kelembapan, UV dipanggil sekali per session** (current weather di lokasi awal) — sama untuk ke-3 rute alternatif. Yang membedakan HES antar rute hanyalah `shade_gap` dan `veg_gap`.
+3. **Future work** (di-mention di README + pitch deck, tidak masuk MVP):
+   - Solar geometry per jam keberangkatan (sun position × building height)
    - Crowdsourced reports (warga lapor "panas banget" / "teduh")
-   - Coverage area expansion (saat ini Jakarta + Depok)
-   - Auto-refresh shade data dari Overpass dengan caching layer
+   - Time-of-day weighted (pagi vs siang vs sore)
+
+## Stage 2 implementation note (H3, 30 April 2026)
+
+Implementasi Stage 2 menampilkan **empat komponen** pada per-route breakdown bar di sidebar: temperature, humidity, UV index, dan shade gap. Komponen kelima — **vegetation density** — masih bagian dari spesifikasi Stage 1 di atas, tetapi sumber datanya belum terintegrasi (belum ada vegetation polygon layer di GeoJSON yang dipakai `lib/hes.ts`). Komponen ini akan ditambahkan kembali begitu sumber data vegetasi tersedia (post-submission). Untuk Stage 2, perhitungan HES per rute hanya menggunakan `shade_gap` (lihat `computeRouteHes` di `web/src/lib/hes.ts`); cuaca (temp/humid/UV) ditampilkan sebagai konteks global yang sama untuk ketiga rute alternatif.

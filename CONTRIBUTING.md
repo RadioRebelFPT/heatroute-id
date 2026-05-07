@@ -1,6 +1,6 @@
 # Contributing to HeatRouteID
 
-Terima kasih sudah tertarik berkontribusi! PR dari luar tim welcome.
+Terima kasih sudah tertarik berkontribusi! Repo ini dikembangkan dalam scope IYREF 2026 Hackathon, tetapi PR dari luar tim juga welcome.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ git clone https://github.com/RadioRebelFPT/heatroute-id.git
 cd heatroute-id/web
 npm install
 cp .env.example .env.local
-# edit .env.local, paste your ORS_API_KEY
+# edit .env.local, paste your VITE_ORS_API_KEY
 npm run dev
 ```
 
