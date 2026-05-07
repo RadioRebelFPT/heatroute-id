@@ -2,19 +2,15 @@
 
 Heat-aware pedestrian navigation untuk kota tropis Indonesia.
 
-> Repository ini adalah submission untuk **[IYREF 2026 Hackathon](https://www.sreitb.com/iyref/hackathon)** (Indonesia Youth Renewable Energy Forum, SRE ITB) — sub-tema **Climate Resilience & Local Wisdom**, oleh tim **Lontong Sayur** (Universitas Indonesia).
+🚀 **Live:** [heatroute-id.vercel.app](https://heatroute-id.vercel.app/)
 
----
-
-## Status
-
-🚧 Stage 2 (Pre-Eliminary) — submit deadline **Kamis, 7 Mei 2026** (extended dari 6 Mei per Announcement Pre-eliminary). Repo dalam pengembangan aktif.
-
-![HeatRouteID — 3 rute dengan HES badge dan per-route breakdown bar](docs/screenshot.png)
+![HeatRouteID — rute dengan HES per ruas dan per-route breakdown bar](docs/screenshot.png)
 
 ## Konsep
 
-Navigasi pejalan kaki yang membandingkan tiga pilihan rute berdasarkan **Heat Exposure Score (HES)**:
+Jakarta dan kota tropis Indonesia menghadapi **urban heat island** yang kian parah: suhu permukaan jalan bisa 5–8 °C lebih tinggi dari area hijau, paparan UV tinggi sepanjang hari, dan tutupan teduh trotoar makin menipis seiring pohon ditebang untuk pelebaran jalan. Untuk pejalan kaki — mahasiswa commuter, pekerja yang naik transit, anak sekolah — pilihan rute paling cepat sering kali bukan pilihan paling sehat.
+
+HeatRouteID membandingkan tiga pilihan rute berdasarkan **Heat Exposure Score (HES)**:
 
 - 🏃 **Fastest Route** — rute tercepat klasik (ETA-optimized)
 - 🌳 **Coolest Route** — rute paling teduh (HES-optimized)
@@ -22,7 +18,7 @@ Navigasi pejalan kaki yang membandingkan tiga pilihan rute berdasarkan **Heat Ex
 
 Secondary output: **Shade Gap Map** yang menandai ruas jalan dengan defisit teduh — input awal untuk perencanaan penghijauan kota oleh pemda.
 
-## Fitur MVP
+## Fitur
 
 | Fitur | Deskripsi |
 |---|---|
@@ -35,8 +31,6 @@ Secondary output: **Shade Gap Map** yang menandai ruas jalan dengan defisit tedu
 | **Weather panel** | Ringkasan cuaca real-time titik awal: Suhu, Terasa, Lembap, UV — angka human-readable, bukan kode mentah. |
 | **HES legend 5-tier** | Sejuk (0–20) · Cukup nyaman (20–40) · Sedang (40–60) · Panas (60–80) · Sangat panas (80–100). Color-coded di peta dan card. |
 | **GPS tracking live** | Mode "ikuti rute" — geolocation device dipakai untuk highlight progress di sepanjang polyline rute pilihan. |
-
-Demo flow lengkap divisualisasikan di video submission Stage 2 (link YouTube di dokumen pengumpulan IYREF).
 
 ## Local Wisdom Connection
 
@@ -51,38 +45,34 @@ Orang Indonesia secara intuitif "nyari teduhan" saat jalan kaki — di emperan t
 | Heat Exposure Score per rute | ❌ | partial (shadow only) | ✅ (suhu + lembap + UV + shade) |
 | Shade-gap map untuk perencanaan kota | ❌ | ❌ (visualisasi shadow real-time) | ✅ |
 | Tropical-Indonesia tuning | ❌ (general) | ❌ (NYC/SF first) | ✅ |
-| Mobile-first PWA | partial | ❌ | ✅ |
+| Mobile-first responsive | ✅ | partial | ✅ |
 | Free + open source | ❌ | partial | ✅ (MIT) |
 
 ShadeMap unggul dalam **akurasi shadow real-time** (sun-position + LiDAR building height). HeatRouteID complementary: bukan visualisasi bayangan saat ini, tapi **rekomendasi rute berdasarkan paparan panas total** + identifikasi gap teduh sebagai input perencanaan penghijauan.
 
-## Known limitations & future work
-
-Stage 2 MVP punya beberapa keterbatasan yang transparan:
+## Known limitations
 
 - **OSM pedestrian coverage di Jakarta belum lengkap.** Banyak trotoar dan gang sempit belum di-tag `highway=footway` atau `foot=yes`. Route-engine (OpenRouteService) hanya bisa pakai data yang tersedia, jadi kadang menghasilkan detour memutari area yang sebenarnya bisa dilewati.
 - **Area `access=private` di-skip otomatis.** Misalnya interior kampus UI Salemba — ORS pedestrian profile menghindari semua way bertanda `access=private` walaupun pejalan kaki umum sebenarnya boleh lewat. Ini menyebabkan rute kadang memutar lewat jalan utama.
 - **Single routing candidate untuk jarak pendek.** Untuk pasangan titik di bawah ~500m, ORS sering hanya mengembalikan 1 alternatif — sehingga 3-route comparison (Tercepat/Tersejuk/Seimbang) collapse jadi 1 row dengan stacked labels.
 - **Shade GeoJSON pre-baked, statis.** Data teduh saat ini di-bake sekali dari Overpass API (lihat `data_prep/`). Pohon tumbang, konstruksi baru, atau pohon baru ditanam tidak ter-refresh otomatis — perlu manual rebuild.
-
-### Roadmap (post-Stage 2)
-
-- **Toggle "include private access"** + warning badge bila rute melewati way `access=private` — opt-in untuk pejalan kaki yang punya akses (mis. mahasiswa UI di kampus sendiri)
-- **Expand coverage** dari Salemba ke Monas–Sudirman corridor (re-bake Overpass bbox) untuk multi-neighborhood comparison
-- **Auto-refresh shade data** dari Overpass dengan caching layer (cron rebuild mingguan)
-- **Mapillary integration** untuk inferensi sidewalk yang belum di-tag di OSM
-- **Self-hosted Valhalla atau OSRM** dengan custom profile yang lebih fleksibel daripada ORS public API
+- **Coverage area terbatas.** Shade data saat ini hanya tersedia untuk Jakarta + Depok. Di luar area, HES default ke 50% dan app menampilkan peringatan eksplisit.
 
 ## Stack
 
 - **Frontend:** React 19 + Vite + TypeScript + Tailwind v4
 - **Maps:** Leaflet + react-leaflet (OpenStreetMap basemap)
-- **Routing:** OpenRouteService API (`foot-walking` profile) — di-proxy via Vercel serverless function (`web/api/ors-proxy.ts`) supaya `ORS_API_KEY` tidak ter-bundle ke browser. Saat dev, `vite.config.ts` proxy ke endpoint yang sama dengan key dari `.env.local`.
-- **Cuaca:** Open-Meteo (suhu, kelembapan, UV — current + hourly forecast)
-- **Sun position:** [SunCalc](https://github.com/mourner/suncalc) untuk azimuth + altitude per timestamp
-- **Geometri rute:** Turf.js (`length`, `along`, `nearest-point-on-line`, `bearing`, `distance`) + Flatbush (R-tree spatial index untuk shade-segment lookup)
-- **Shade data:** Pre-baked GeoJSON dari Overpass API (lihat `data_prep/`)
-- **Deploy:** Vercel (static + serverless function untuk ORS proxy)
+- **Routing:** OpenRouteService API (`foot-walking` profile), di-proxy via Vercel serverless function
+- **Cuaca:** Open-Meteo (current + hourly forecast)
+- **Deploy:** Vercel (static + serverless function)
+
+### Implementation notes
+
+- **Sun position** dihitung pakai [SunCalc](https://github.com/mourner/suncalc) (azimuth + altitude per timestamp) → masuk ke HES sebagai bobot shade-sensitivity (malam = bobot teduh kolaps ke nol; siang = bangunan berhenti memberi shade saat matahari overhead).
+- **Geometri rute** pakai Turf.js (`length`, `along`, `nearest-point-on-line`, `bearing`, `distance`) untuk sampling, dan Flatbush sebagai R-tree spatial index biar lookup shade-segment per sample point tetap cepat di rute panjang.
+- **API key safety:** ORS key (`ORS_API_KEY`) dibaca server-side oleh `web/api/ors-proxy.ts` — tidak ter-bundle ke browser. Saat dev, `vite.config.ts` proxy ke endpoint yang sama dengan key dari `.env.local`.
+- **Shade data pipeline:** GeoJSON pre-baked dari Overpass API (lihat `data_prep/`) → 6 shard files yang di-load on-demand sesuai bbox rute, biar payload tetap kecil.
+- **Detail formula HES:** lihat [`docs/HES_FORMULA.md`](docs/HES_FORMULA.md).
 
 ## Repo structure
 
@@ -99,10 +89,6 @@ heatroute-id/
 └── web/                          # React + Vite frontend
 ```
 
-## Test bed (MVP)
-
-**Salemba area** — radius ~1.5 km dari Kampus UI Salemba. Cocok untuk persona "mahasiswa commuter": padat aktivitas, banyak transit (TJ, KRL Cikini), dan punya variasi tutupan pohon yang jelas.
-
 ## Cara menjalankan
 
 ```bash
@@ -114,15 +100,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Buka `http://localhost:5173`. Drop dua pin di area Salemba untuk melihat 3 rute + HES per rute.
+Buka `http://localhost:5173`. Drop dua pin di area Jakarta atau Depok untuk melihat 3 rute + HES per rute.
 
 API key: gratis di [openrouteservice.org](https://openrouteservice.org/dev/#/signup) (2,000 request/day di tier gratis — cukup untuk dev + demo). Karena di-proxy, key tidak masuk ke browser bundle.
 
-Detail formula HES: lihat [`docs/HES_FORMULA.md`](docs/HES_FORMULA.md).
-
 ## Deploy
-
-**Production:** [heatroute-id.vercel.app](https://heatroute-id.vercel.app/)
 
 ### Deploy fork sendiri
 
