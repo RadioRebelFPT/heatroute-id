@@ -78,6 +78,16 @@ export function climateContribution(w: Weather): number {
  * `shadeSensitivity` ∈ [0, 1] gates the entire shade+veg contribution by sun
  * altitude — at night there's no direct sun to be exposed from, so HES
  * collapses to pure climate. Default 1 preserves daytime behavior. */
+/** Effective shade gap for a segment in [0, 1]: baseline gap plus the share of
+ * building-derived shade that disappears when the sun is overhead (time factor
+ * → 0). Shared between segmentHes and the per-route shadeOnly metric so both
+ * stay in sync. */
+export function shadeGapAt(props: ShadeProps, bldgTimeFactor = 1): number {
+  const baseShadeGap = clamp01(props.shade_gap);
+  const bldgReduction = 0.3 * clamp01(props.building_proximity) * (1 - bldgTimeFactor);
+  return clamp01(baseShadeGap + bldgReduction);
+}
+
 export function segmentHes(
   props: ShadeProps,
   w: Weather,
@@ -85,9 +95,7 @@ export function segmentHes(
   shadeSensitivity = 1,
 ): number {
   const climate = climateContribution(w);
-  const baseShadeGap = clamp01(props.shade_gap);
-  const bldgReduction = 0.3 * clamp01(props.building_proximity) * (1 - bldgTimeFactor);
-  const shadeGap = clamp01(baseShadeGap + bldgReduction);
+  const shadeGap = shadeGapAt(props, bldgTimeFactor);
   const vegGap = clamp01(1 - props.veg_density_norm);
   return clamp01(climate + shadeSensitivity * (W_SHADE * shadeGap + W_VEG * vegGap));
 }
@@ -123,17 +131,35 @@ function getShadeIndex(shade: ShadeCollection): Flatbush {
   return idx;
 }
 
-export function computeRouteHes(
+/** Per-route HES + shade-only metric, averaged over sample points along the
+ * polyline in a single pass.
+ *
+ * When `weather` is provided, the `hes` field uses the full segmentHes formula
+ * (climate + shade gap + vegetation gap, with sun-altitude modulation). Routes
+ * therefore re-rank as the user moves the departure-time slider — at night
+ * shade collapses to zero weight, at noon buildings stop providing shade.
+ *
+ * When `weather` is null (loading or fetch failed), `hes` falls back to the
+ * static shade-gap-only score so the route panel still shows something usable.
+ *
+ * `shadeOnly` is the average effective shade gap along the route, independent
+ * of weather. Used for the "Shade" breakdown bar so it doesn't duplicate the
+ * full HES. */
+export function computeRouteMetrics(
   route: RouteSummary,
   shade: ShadeCollection,
-): number {
+  weather: Weather | null,
+  bldgTimeFactor = 1,
+  shadeSensitivity = 1,
+): { hes: number; shadeOnly: number } {
   const index = getShadeIndex(shade);
   const routeFeature = lineString(route.geometry.coordinates);
   const totalKm = turfLength(routeFeature, { units: "kilometers" });
   const stepKm = SAMPLE_INTERVAL_M / 1000;
   const numSamples = Math.max(2, Math.ceil(totalKm / stepKm) + 1);
 
-  let sumGap = 0;
+  let sumHes = 0;
+  let sumShade = 0;
   let count = 0;
 
   for (let i = 0; i < numSamples; i++) {
@@ -151,8 +177,7 @@ export function computeRouteHes(
     if (candidates.length === 0) continue;
 
     let bestDist = Infinity;
-    let bestGap = 0;
-    let foundMatch = false;
+    let bestProps: ShadeProps | null = null;
 
     for (const ci of candidates) {
       const f = shade.features[ci];
@@ -161,29 +186,41 @@ export function computeRouteHes(
       const dist = props.dist ?? Infinity;
       if (dist < bestDist) {
         bestDist = dist;
-        bestGap = f.properties.shade_gap;
-        foundMatch = true;
+        bestProps = f.properties;
       }
     }
 
-    if (foundMatch && bestDist <= MAX_DIST_TO_SHADE_M) {
-      sumGap += bestGap;
+    if (bestProps && bestDist <= MAX_DIST_TO_SHADE_M) {
+      const segHes = weather
+        ? segmentHes(bestProps, weather, bldgTimeFactor, shadeSensitivity)
+        : bestProps.shade_gap;
+      sumHes += segHes;
+      sumShade += shadeGapAt(bestProps, bldgTimeFactor);
       count += 1;
     }
   }
 
-  return count > 0 ? sumGap / count : 0.5;
+  if (count === 0) {
+    // No matching shade samples (route outside coverage). Fall back to neutral
+    // 50% so the score matches the "Luar area data: HES default 50%" notice
+    // rather than a misleadingly low climate-only number.
+    return { hes: 0.5, shadeOnly: 0.5 };
+  }
+  return { hes: sumHes / count, shadeOnly: sumShade / count };
 }
 
 export function computeAndLabel(
   routes: RouteSummary[],
   shade: ShadeCollection,
+  weather: Weather | null,
+  bldgTimeFactor = 1,
+  shadeSensitivity = 1,
 ): LabeledRoute[] {
   if (routes.length === 0) return [];
 
   const withHes = routes.map((r) => ({
     ...r,
-    hes: computeRouteHes(r, shade),
+    ...computeRouteMetrics(r, shade, weather, bldgTimeFactor, shadeSensitivity),
   }));
 
   const minDuration = Math.min(...withHes.map((r) => r.duration));

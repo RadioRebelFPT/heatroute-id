@@ -47,6 +47,17 @@ export function TimeSlider() {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
+  // Local draft so the user can type partial input (e.g. "14") without the
+  // controlled value snapping back on each keystroke. Synced from `t` when
+  // the external time changes (mode switch, "now" tick, etc.) using React's
+  // "adjusting state during render" pattern so we don't trigger a cascade.
+  const [draft, setDraft] = useState(toTimeInputValue(t));
+  const [lastT, setLastT] = useState(t);
+  if (t !== lastT) {
+    setLastT(t);
+    setDraft(toTimeInputValue(t));
+  }
+
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
@@ -69,9 +80,17 @@ export function TimeSlider() {
     setOpen(false);
   };
 
-  const handleTimeChange = (value: string) => {
-    const next = applyTimeInput(t, value);
-    if (next) dispatch({ type: "SET_DEPARTURE_TIME", time: next });
+  const commitDraft = (raw: string) => {
+    // Allow "1430" → "14:30" so users don't have to type the colon.
+    const normalized =
+      /^\d{4}$/.test(raw) ? `${raw.slice(0, 2)}:${raw.slice(2)}` : raw;
+    const next = applyTimeInput(t, normalized);
+    if (next) {
+      dispatch({ type: "SET_DEPARTURE_TIME", time: next });
+      setDraft(toTimeInputValue(next));
+    } else {
+      setDraft(toTimeInputValue(t));
+    }
   };
 
   return (
@@ -151,11 +170,22 @@ export function TimeSlider() {
       <div className="flex items-baseline justify-between gap-3">
         {showPicker ? (
           <input
-            type="time"
-            value={toTimeInputValue(t)}
-            onChange={(e) => handleTimeChange(e.target.value)}
-            className="heatroute-time-input rounded-lg border border-slate-300 bg-white px-2 py-1 text-2xl font-semibold tabular-nums text-slate-900 focus:border-slate-500 focus:outline-none"
-            aria-label="Jam berangkat"
+            type="text"
+            inputMode="numeric"
+            pattern="\d{2}:\d{2}"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={(e) => commitDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitDraft(e.currentTarget.value);
+                e.currentTarget.blur();
+              }
+            }}
+            maxLength={5}
+            className="heatroute-time-input w-[6ch] rounded-lg border border-slate-300 bg-white px-2 py-1 text-center text-2xl font-semibold tabular-nums text-slate-900 focus:border-slate-500 focus:outline-none"
+            aria-label="Jam berangkat (24 jam, format HH:MM)"
           />
         ) : (
           <span aria-hidden="true" />

@@ -30,3 +30,8 @@ Thumbs.db
 data_prep/_cache/
 *.osm
 *.osm.pbf
+
+# Local tool artifacts (Claude Code, Playwright MCP)
+.claude/
+.playwright-mcp/
+time-input-*.png

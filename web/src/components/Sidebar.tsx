@@ -309,8 +309,8 @@ function RouteBreakdown({ route }: { route: LabeledRoute }) {
       />
       <Bar
         label="Shade"
-        value={route.hes}
-        display={`${Math.round(route.hes * 100)}%`}
+        value={route.shadeOnly}
+        display={`${Math.round(route.shadeOnly * 100)}%`}
       />
     </div>
   );

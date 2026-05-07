@@ -19,6 +19,10 @@ export type RouteSummary = {
 
 export type LabeledRoute = RouteSummary & {
   hes: number;
+  // Average shade gap along the route in [0, 1] — fraction of route exposed
+  // to direct sun (after applying the building-shade time factor). Independent
+  // of climate and vegetation; used for the "Shade" breakdown row.
+  shadeOnly: number;
   hesCategory: HesCategory;
   isFastest: boolean;
   isCoolest: boolean;
@@ -137,14 +141,21 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     case "ROUTES_LOADING":
       return { ...state, routesStatus: "loading", routesError: null };
-    case "ROUTES_SUCCESS":
+    case "ROUTES_SUCCESS": {
+      // Preserve user's route selection across time/weather-driven recomputes.
+      // Routes only refresh keys (origin/destination) reset selection elsewhere
+      // via SET_ORIGIN/SET_DESTINATION/RESET_PINS.
+      const prev = state.selectedRouteIndex;
+      const nextSelected =
+        prev !== null && prev < action.routes.length ? prev : null;
       return {
         ...state,
         routes: action.routes,
         routesStatus: "idle",
         routesError: null,
-        selectedRouteIndex: null,
+        selectedRouteIndex: nextSelected,
       };
+    }
     case "ROUTES_ERROR":
       return {
         ...state,
@@ -156,7 +167,15 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case "SELECT_ROUTE":
       return { ...state, selectedRouteIndex: action.index };
     case "WEATHER_LOADING":
-      return { ...state, weatherStatus: "loading", weatherError: null };
+      // Clear the previous weather so HES doesn't score a new origin against
+      // the prior location's snapshot. Triggers the climate-null fallback in
+      // computeRouteMetrics until the new fetch resolves.
+      return {
+        ...state,
+        weather: null,
+        weatherStatus: "loading",
+        weatherError: null,
+      };
     case "WEATHER_SUCCESS":
       return {
         ...state,

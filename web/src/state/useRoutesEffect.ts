@@ -3,10 +3,14 @@ import { useAppState } from "./useAppState";
 import { fetchRoutes, OrsError } from "../lib/ors";
 import { loadShardsForBounds, type Bbox } from "../lib/shadeData";
 import { computeAndLabel } from "../lib/hes";
+import { weatherAt } from "../lib/weather";
+import {
+  buildingShadeTimeFactor,
+  shadeSensitivityFactor,
+  sunAltitudeRad,
+} from "../lib/sun";
 import type { LineString } from "geojson";
 import type { LatLng } from "./types";
-
-const ORS_API_KEY = (import.meta.env.VITE_ORS_API_KEY as string | undefined) ?? "";
 
 const ORIGIN_DEST_PAD_DEG = 0.02; // ~2.2km cushion while routes are still in flight
 const ROUTE_BBOX_PAD_DEG = 0.005; // ~550m cushion around the actual route geometry
@@ -42,6 +46,8 @@ export function useRoutesEffect() {
     if (!state.origin || !state.destination) return;
     const origin = state.origin;
     const destination = state.destination;
+    const departureTime = state.departureTime;
+    const weatherHourly = state.weather;
 
     let cancelled = false;
     dispatch({ type: "ROUTES_LOADING" });
@@ -49,7 +55,10 @@ export function useRoutesEffect() {
     // Kick off the route fetch in parallel with a coarse pre-warm of the
     // shards that surround the pin pair. The route can detour, so we still
     // refine the shard set with the precise route bbox once it returns.
-    const routesP = fetchRoutes(origin, destination, ORS_API_KEY);
+    // ORS responses are cached by O/D in lib/ors.ts, so departureTime-only
+    // changes hit the cache instantly and the work below collapses to a
+    // re-compute of HES with the fresh weather + sun snapshot.
+    const routesP = fetchRoutes(origin, destination);
     void loadShardsForBounds(pinBbox(origin, destination));
 
     routesP
@@ -59,7 +68,17 @@ export function useRoutesEffect() {
           routesBbox(routes.map((r) => r.geometry)),
         );
         if (cancelled) return;
-        const labeled = computeAndLabel(routes, shade);
+        const weather = weatherAt(weatherHourly, departureTime);
+        const altRad = sunAltitudeRad(departureTime);
+        const bldgTimeFactor = buildingShadeTimeFactor(altRad);
+        const shadeSens = shadeSensitivityFactor(altRad);
+        const labeled = computeAndLabel(
+          routes,
+          shade,
+          weather,
+          bldgTimeFactor,
+          shadeSens,
+        );
         dispatch({ type: "ROUTES_SUCCESS", routes: labeled });
       })
       .catch((e: unknown) => {
@@ -72,5 +91,11 @@ export function useRoutesEffect() {
     return () => {
       cancelled = true;
     };
-  }, [state.origin, state.destination, dispatch]);
+  }, [
+    state.origin,
+    state.destination,
+    state.departureTime,
+    state.weather,
+    dispatch,
+  ]);
 }

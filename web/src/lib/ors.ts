@@ -1,10 +1,15 @@
 import type { LineString } from "geojson";
 import type { LatLng, RouteSummary } from "../state/types";
 
-const ORS_URL =
-  "https://api.openrouteservice.org/v2/directions/foot-walking/geojson";
+// Routes through /api/ors-proxy so the ORS API key stays server-side.
+// Dev: vite.config.ts proxies this path to ORS with the key.
+// Prod: web/api/ors-proxy.ts (Vercel serverless) does the same.
+const ORS_PROXY_URL = "/api/ors-proxy";
 
-const cache = new Map<string, RouteSummary[]>();
+// Cache the in-flight Promise so concurrent callers (e.g. the routes effect
+// re-running when weather/time change before the first response lands) share
+// a single network request instead of double-hitting the ORS quota.
+const cache = new Map<string, Promise<RouteSummary[]>>();
 
 function cacheKey(o: LatLng, d: LatLng): string {
   return `${o.lat.toFixed(5)}|${o.lng.toFixed(5)}|${d.lat.toFixed(5)}|${d.lng.toFixed(5)}`;
@@ -26,19 +31,25 @@ type OrsFeature = {
 
 type OrsResponse = { features: OrsFeature[] };
 
-export async function fetchRoutes(
+export function fetchRoutes(
   origin: LatLng,
   destination: LatLng,
-  apiKey: string,
 ): Promise<RouteSummary[]> {
   const key = cacheKey(origin, destination);
   const cached = cache.get(key);
   if (cached) return cached;
 
-  if (!apiKey) {
-    throw new OrsError("VITE_ORS_API_KEY belum di-set di .env.local");
-  }
+  const promise = doFetchRoutes(origin, destination);
+  cache.set(key, promise);
+  // Don't sticky-cache failures — drop on rejection so the next caller retries.
+  promise.catch(() => cache.delete(key));
+  return promise;
+}
 
+async function doFetchRoutes(
+  origin: LatLng,
+  destination: LatLng,
+): Promise<RouteSummary[]> {
   const body = {
     coordinates: [
       [origin.lng, origin.lat],
@@ -54,11 +65,10 @@ export async function fetchRoutes(
 
   let response: Response;
   try {
-    response = await fetch(ORS_URL, {
+    response = await fetch(ORS_PROXY_URL, {
       method: "POST",
       headers: {
         Accept: "application/geo+json,application/json",
-        Authorization: apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -69,7 +79,10 @@ export async function fetchRoutes(
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new OrsError("ORS API key invalid (401) — cek .env.local", 401);
+      throw new OrsError(
+        "ORS API key invalid (401) — cek konfigurasi server (ORS_API_KEY)",
+        401,
+      );
     }
     if (response.status === 429) {
       throw new OrsError("ORS rate limit (429) — coba lagi 1 menit", 429);
@@ -80,6 +93,16 @@ export async function fetchRoutes(
         404,
       );
     }
+    if (response.status === 500) {
+      // Could be the proxy itself returning 500 because key isn't configured.
+      const text = await response.text().catch(() => "");
+      throw new OrsError(
+        text.includes("ORS_API_KEY")
+          ? "Server proxy belum dikonfigurasi — set ORS_API_KEY di environment"
+          : `ORS error 500: ${text.slice(0, 200)}`,
+        500,
+      );
+    }
     const text = await response.text().catch(() => "");
     throw new OrsError(
       `ORS error ${response.status}: ${text.slice(0, 200)}`,
@@ -88,12 +111,9 @@ export async function fetchRoutes(
   }
 
   const data = (await response.json()) as OrsResponse;
-  const routes: RouteSummary[] = data.features.map((f) => ({
+  return data.features.map((f) => ({
     geometry: f.geometry,
     duration: f.properties.summary.duration,
     distance: f.properties.summary.distance,
   }));
-
-  cache.set(key, routes);
-  return routes;
 }
